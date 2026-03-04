@@ -1,5 +1,6 @@
 package com.budgetcoach.data.ai
 
+import com.budgetcoach.BuildConfig
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.generationConfig
 import kotlinx.coroutines.Dispatchers
@@ -7,11 +8,11 @@ import kotlinx.coroutines.withContext
 
 class GeminiService {
 
-    private val apiKey = "AIzaSyAuAMbcTM8Nba2BwjRIAQG5g3a2dmojmHs"
+    private val apiKey = BuildConfig.GEMINI_API_KEY
 
     private val model: GenerativeModel? = if (apiKey.isNotBlank()) {
         GenerativeModel(
-            modelName = "gemini-1.5-flash",
+            modelName = "models/gemini-1.5-flash", // 모델 풀 네임 명시 (models/ 접두사 추가)
             apiKey = apiKey,
             generationConfig = generationConfig {
                 temperature = 0.7f
@@ -60,6 +61,7 @@ $userMessage
             val response = model.generateContent(fullPrompt)
             response.text ?: "응답을 생성할 수 없습니다."
         } catch (e: Exception) {
+            // 상세한 오류 메시지 확인을 위해 e.message 출력
             "⚠️ AI 응답 오류: ${e.message ?: "알 수 없는 오류가 발생했습니다."}"
         }
     }
