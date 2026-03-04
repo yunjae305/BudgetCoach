@@ -13,10 +13,11 @@ class GeminiService {
     // 1. API 키 설정 (local.properties의 GEMINI_API_KEY 사용)
     private val apiKey = BuildConfig.GEMINI_API_KEY
 
-    // 2. 모델 설정
+    // 2. 모델 설정 (Gemini 2.5 Flash 적용)
+    // 사용자의 확인에 따라 Gemini 2.5 Flash 모델로 설정합니다.
     private val model: GenerativeModel? = if (apiKey.isNotBlank()) {
         GenerativeModel(
-            modelName = "gemini-1.5-flash",
+            modelName = "models/gemini-2.5-flash", 
             apiKey = apiKey,
             generationConfig = generationConfig {
                 temperature = 0.7f
@@ -32,12 +33,12 @@ class GeminiService {
         )
     } else null
 
-    val isAvailable: Boolean get() = model != null
+    val isAvailable: Boolean get() = model != null && apiKey.isNotBlank()
 
     // 3. 채팅 세션 관리
     private var chat: Chat? = null
 
-    private fun initChatSessionIfNeeded() {
+    private fun initChatSession() {
         if (chat == null && model != null) {
             chat = model.startChat()
         }
@@ -47,74 +48,45 @@ class GeminiService {
         userMessage: String,
         budgetContext: String
     ): String = withContext(Dispatchers.IO) {
-        if (model == null || apiKey.isBlank()) {
-            return@withContext "⚠️ Gemini API 키가 설정되지 않았어요. local.properties를 확인해주세요."
+        if (!isAvailable) {
+            return@withContext "⚠️ Gemini API 키가 설정되지 않았거나 유효하지 않습니다."
         }
-
-        initChatSessionIfNeeded()
-
-        val fullPrompt = """
-            [현재 가계부 상황]
-            ${budgetContext}
-            
-            [사용자 질문/요청]
-            ${userMessage}
-        """.trimIndent()
 
         try {
+            initChatSession()
+
+            val fullPrompt = """
+                [현재 가계부 상황]
+                $budgetContext
+                
+                [사용자 질문/요청]
+                $userMessage
+            """.trimIndent()
+
             val response = chat?.sendMessage(fullPrompt)
-            response?.text ?: "응답을 받을 수 없습니다."
+            response?.text ?: "코치가 응답을 생성하지 못했습니다. 잠시 후 다시 시도해주세요."
         } catch (e: Exception) {
             val errorMsg = e.message ?: ""
-            // 404 오류 발생 시 models/ 접두사 명시하여 재시도 (일부 SDK 버전 호환성)
-            if (errorMsg.contains("404") || errorMsg.contains("not found")) {
-                try {
-                    val retryModel = GenerativeModel(
-                        modelName = "models/gemini-1.5-flash",
-                        apiKey = apiKey,
-                        generationConfig = generationConfig { temperature = 0.7f }
-                    )
-                    val retryChat = retryModel.startChat()
-                    val retryResponse = retryChat.sendMessage(fullPrompt)
-                    return@withContext retryResponse.text ?: "응답 실패"
-                } catch (retryE: Exception) {
-                    return@withContext "⚠️ 모델 인식 오류(404): ${retryE.message}"
-                }
+            if (errorMsg.contains("404")) {
+                "⚠️ 모델 인식 오류(404): 'gemini-2.5-flash' 모델을 찾을 수 없습니다. API 키의 권한이나 모델명을 다시 확인해 주세요."
+            } else {
+                "⚠️ AI 응답 오류: ${e.localizedMessage}"
             }
-            "⚠️ AI 응답 오류: ${e.message}"
         }
     }
 
-    suspend fun reportExpense(
-        itemName: String,
-        amount: Long,
-        monthlyTotal: Long,
-        remainingBudget: Long
-    ): String {
-        val context = """
-            이번 달 총 지출: ₩${String.format("%,d", monthlyTotal)}
-            남은 예산: ₩${String.format("%,d", remainingBudget)}
-        """.trimIndent()
-
-        return chat(
-            "방금 '$itemName'에 ₩${String.format("%,d", amount)}을 지출했어. 내 예산 상태에 대해 조언해줘.",
-            context
-        )
+    suspend fun reportExpense(itemName: String, amount: Long, monthlyTotal: Long, remainingBudget: Long): String {
+        val context = "이번 달 총 지출: ₩${String.format("%,d", monthlyTotal)}\n남은 예산: ₩${String.format("%,d", remainingBudget)}"
+        return chat("방금 '$itemName'에 ₩${String.format("%,d", amount)}을 지출했어. 내 예산 상태에 대해 조언해줘.", context)
     }
 
-    suspend fun getAdvice(
-        remainingBudget: Long,
-        remainingDays: Int,
-        dailyRecommended: Long,
-        totalSpent: Long
-    ): String {
+    suspend fun getAdvice(remainingBudget: Long, remainingDays: Int, dailyRecommended: Long, totalSpent: Long): String {
         val context = """
             남은 예산: ₩${String.format("%,d", remainingBudget)}
             남은 일수: ${remainingDays}일
             하루 권장 지출액: ₩${String.format("%,d", dailyRecommended)}
             이번 달 총 지출: ₩${String.format("%,d", totalSpent)}
         """.trimIndent()
-
         return chat("현재 재정 상황을 분석해서 오늘 하루 어떻게 보내야 할지 조언해줘.", context)
     }
 }
