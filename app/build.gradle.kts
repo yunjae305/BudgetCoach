@@ -99,7 +99,7 @@ dependencies {
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
 
-    // Gemini AI (Updated to latest stable version)
+    // Gemini AI
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 
     // Coroutines
