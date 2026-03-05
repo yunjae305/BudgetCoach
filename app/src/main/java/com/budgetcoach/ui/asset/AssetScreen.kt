@@ -27,6 +27,7 @@ fun AssetScreen(
     onBack: () -> Unit
 ) {
     val assets by viewModel.assets.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -36,6 +37,19 @@ fun AssetScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, "뒤로", tint = TextPrimary)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.refreshAssetsFromApi() }) {
+                        if (isRefreshing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Secondary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Default.Refresh, "새로고침", tint = TextPrimary)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark)

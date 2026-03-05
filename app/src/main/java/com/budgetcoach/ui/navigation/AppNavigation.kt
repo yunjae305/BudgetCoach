@@ -14,8 +14,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.budgetcoach.di.AppModule
-import com.budgetcoach.ui.asset.AssetScreen
-import com.budgetcoach.ui.asset.AssetViewModel
 import com.budgetcoach.ui.budget.BudgetSettingScreen
 import com.budgetcoach.ui.budget.BudgetSettingViewModel
 import com.budgetcoach.ui.chat.AiChatScreen
@@ -33,7 +31,6 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector,
     object Expense : Screen("expense", "지출", Icons.Outlined.Receipt, Icons.Filled.Receipt)
     object Statistics : Screen("statistics", "통계", Icons.Outlined.PieChart, Icons.Filled.PieChart)
     object Chat : Screen("chat", "AI코치", Icons.Outlined.SmartToy, Icons.Filled.SmartToy)
-    object Asset : Screen("asset", "자산", Icons.Outlined.AccountBalance, Icons.Filled.AccountBalance)
     object BudgetSetting : Screen("budget_setting", "예산설정", Icons.Outlined.Settings, Icons.Filled.Settings)
 }
 
@@ -41,8 +38,7 @@ private val bottomNavItems = listOf(
     Screen.Dashboard,
     Screen.Expense,
     Screen.Statistics,
-    Screen.Chat,
-    Screen.Asset
+    Screen.Chat
 )
 
 @Composable
@@ -150,16 +146,6 @@ fun AppNavigation(appModule: AppModule) {
                     )
                 }
                 AiChatScreen(
-                    viewModel = vm,
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(Screen.Asset.route) {
-                val vm = remember {
-                    AssetViewModel(appModule.assetRepository)
-                }
-                AssetScreen(
                     viewModel = vm,
                     onBack = { navController.popBackStack() }
                 )

@@ -14,6 +14,9 @@ class AssetViewModel(
     private val _assets = MutableStateFlow<List<AssetEntity>>(emptyList())
     val assets: StateFlow<List<AssetEntity>> = _assets.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     init {
         loadAssets()
     }
@@ -22,6 +25,19 @@ class AssetViewModel(
         viewModelScope.launch {
             assetRepository.getAll().collect { list ->
                 _assets.value = list
+            }
+        }
+    }
+
+    fun refreshAssetsFromApi() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                assetRepository.syncAssets()
+            } catch (e: Exception) {
+                // Handle error (e.g., show a Snackbar)
+            } finally {
+                _isRefreshing.value = false
             }
         }
     }
